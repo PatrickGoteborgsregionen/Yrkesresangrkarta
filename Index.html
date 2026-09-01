@@ -175,6 +175,7 @@
   .legend-count{margin-left:auto; font-variant-numeric:tabular-nums; color:var(--ink); font-weight:600;}
   .legend-regions{display:flex; flex-direction:column; gap:5px; margin-bottom:10px;}
   .legend-region-row{display:flex; align-items:center; gap:8px;}
+  .region-toggle{margin:0; flex:none; cursor:pointer; accent-color:var(--accent, #0c5f99);}
   .legend-region-name{font-size:12px; color:var(--ink-soft); width:112px; flex:none;}
   .legend-strip{display:flex; gap:2px;}
   .legend-swatch-mini{
@@ -431,6 +432,8 @@ Mölndal"></textarea>
   };
   const REGION_ORDER = ['GR','Boras','Skaraborg','Fyrbodal','Halland','Gotland'];
   const GREY0 = '#d7dbdd';
+  const regionVisibility = {};
+  REGION_ORDER.forEach(r=>{ regionVisibility[r] = true; });
 
   function bucketFor(n){
     if(!n || n<=0) return 0;
@@ -511,6 +514,19 @@ Mölndal"></textarea>
     return {counts, unmatched};
   }
 
+  function applyRegionVisibility(region){
+    const visible = regionVisibility[region];
+    const g = svg.querySelector('g.region-group[data-region="'+region+'"]');
+    if(g) g.style.display = visible ? '' : 'none';
+    labelsGroup.querySelectorAll('text[data-region="'+region+'"]').forEach(t=>{
+      t.style.display = visible ? '' : 'none';
+    });
+  }
+
+  function applyAllRegionVisibility(){
+    REGION_ORDER.forEach(applyRegionVisibility);
+  }
+
   function renderLegend(activeCounts){
     const legend = document.getElementById('legend');
     legend.innerHTML = '';
@@ -520,6 +536,14 @@ Mölndal"></textarea>
     REGION_ORDER.forEach(region=>{
       const row = document.createElement('div');
       row.className = 'legend-region-row';
+      const toggle = document.createElement('input');
+      toggle.type = 'checkbox';
+      toggle.className = 'region-toggle';
+      toggle.checked = regionVisibility[region];
+      toggle.addEventListener('change', ()=>{
+        regionVisibility[region] = toggle.checked;
+        applyRegionVisibility(region);
+      });
       const nameEl = document.createElement('span');
       nameEl.className = 'legend-region-name';
       nameEl.textContent = REGION_NAMES[region];
@@ -537,6 +561,7 @@ Mölndal"></textarea>
         sw.title = BUCKETS[idx+1].label;
         strip.appendChild(sw);
       });
+      row.appendChild(toggle);
       row.appendChild(nameEl);
       row.appendChild(strip);
       regionsWrap.appendChild(row);
@@ -732,9 +757,11 @@ Mölndal"></textarea>
       text.setAttribute('x', c.cx + ox);
       text.setAttribute('y', c.cy + oy);
       text.setAttribute('class', 'label-text');
+      text.setAttribute('data-region', p.dataset.region);
       text.textContent = n;
       labelsGroup.appendChild(text);
     });
+    applyAllRegionVisibility();
   }
 
   showLabelsCheckbox.addEventListener('change', ()=>{
